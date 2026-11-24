@@ -88,6 +88,24 @@
       touch-action: manipulation;
     }
     .swap button:hover { background: #cbd5e0; }
+    .speak {
+      display: block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.8rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: #667eea;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      touch-action: manipulation;
+    }
+    .speak:hover { background: #5a67d8; }
+    .speak:disabled { background: #a3bffa; cursor: default; }
+    .speak[hidden] { display: none; }
     .info {
       margin-top: 1.5rem;
       padding: 0.75rem 1rem;
@@ -130,6 +148,8 @@
       <input type="number" id="eur" placeholder="0" step="0.01" min="0">
       <span class="currency">EUR</span>
     </div>
+
+    <button class="speak" id="speakBtn" type="button" hidden>🔊 Prečítať nahlas</button>
 
     <div class="info" id="info">Načítavam aktuálny kurz…</div>
     <div class="source">
@@ -194,6 +214,52 @@
       direction = direction === 'czk-to-eur' ? 'eur-to-czk' : 'czk-to-eur';
       recalculate();
     });
+
+    // Hlasové čítanie výsledku (Web Speech API, slovenský hlas)
+    const speakBtn = document.getElementById('speakBtn');
+
+    function korunWord(n) {
+      if (!Number.isInteger(n)) return 'koruny';
+      if (n === 1) return 'koruna';
+      if (n >= 2 && n <= 4) return 'koruny';
+      return 'korún';
+    }
+
+    function spokenNumber(n) {
+      const rounded = Math.round(n * 100) / 100;
+      return Number.isInteger(rounded)
+        ? String(rounded)
+        : rounded.toFixed(2).replace('.', ',');
+    }
+
+    function buildSentence() {
+      const czk = parseFloat(czkInput.value);
+      const eur = parseFloat(eurInput.value);
+      if (isNaN(czk) || isNaN(eur)) return null;
+      const czkR = Math.round(czk * 100) / 100;
+      const czkPart = spokenNumber(czk) + ' ' + korunWord(czkR);
+      const eurPart = spokenNumber(eur) + ' eur';
+      return direction === 'czk-to-eur'
+        ? czkPart + (korunWord(czkR) === 'koruny' && Number.isInteger(czkR) ? ' sú ' : ' je ') + eurPart + '.'
+        : eurPart + ' je ' + czkPart + '.';
+    }
+
+    function speakResult() {
+      const sentence = buildSentence();
+      if (!sentence) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(sentence);
+      u.lang = 'sk-SK';
+      const voice = speechSynthesis.getVoices().find(v => v.lang.toLowerCase().startsWith('sk'));
+      if (voice) u.voice = voice;
+      speechSynthesis.speak(u);
+    }
+
+    if ('speechSynthesis' in window) {
+      speakBtn.hidden = false;
+      speakBtn.addEventListener('click', speakResult);
+      speechSynthesis.getVoices(); // niektoré prehliadače načítajú hlasy až po prvom volaní
+    }
 
     loadRate();
 

@@ -1,4 +1,4 @@
-const CACHE = 'czk-eur-v1';
+const CACHE = 'czk-eur-v2';
 const ASSETS = [
   './',
   './index.html',
